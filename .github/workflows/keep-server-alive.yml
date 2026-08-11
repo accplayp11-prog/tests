@@ -13,40 +13,20 @@ jobs:
       group: keep-server-alive
       cancel-in-progress: false
     steps:
-      - name: Start codespace 1 (panel + node 1)
+      - name: Start codespace
         env:
           GH_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
         run: |
-          gh codespace start -c special-palm-tree-rrqg4vgj67cp6wp >/dev/null 2>&1 || true
-          echo "codespace 1 start requested"
+          gh codespace start -c mc-lab-cs1-69q969jxvxp4h5p7r >/dev/null 2>&1 || true
+          echo "codespace start requested"
 
-      - name: Ensure stack on codespace 1
+      - name: Ensure stack on codespace
         env:
           GH_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
         run: |
           for i in 1 2 3 4 5 6 7 8; do
-            if gh codespace ssh -c special-palm-tree-rrqg4vgj67cp6wp -- bash /workspaces/tests/.keepalive/ensure_stack.sh; then
-              echo "stack 1 ensured (attempt $i)"
-              break
-            fi
-            echo "attempt $i failed, waiting 15s"
-            sleep 15
-          done
-
-      - name: Start codespace 2 (node 2)
-        env:
-          GH_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
-        run: |
-          gh codespace start -c ominous-palm-tree-r77jjjw4pgwq2x5qq >/dev/null 2>&1 || true
-          echo "codespace 2 start requested"
-
-      - name: Ensure stack on codespace 2
-        env:
-          GH_TOKEN: ${{ secrets.KEEPALIVE_TOKEN }}
-        run: |
-          for i in 1 2 3 4 5 6 7 8; do
-            if gh codespace ssh -c ominous-palm-tree-r77jjjw4pgwq2x5qq -- bash /workspaces/tests/.keepalive/ensure_stack2.sh; then
-              echo "stack 2 ensured (attempt $i)"
+            if gh codespace ssh -c mc-lab-cs1-69q969jxvxp4h5p7r -- bash /workspaces/tests/.keepalive/ensure_stack.sh; then
+              echo "stack ensured (attempt $i)"
               break
             fi
             echo "attempt $i failed, waiting 15s"

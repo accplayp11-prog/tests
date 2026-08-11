@@ -54,7 +54,8 @@ VEL_IP=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress
 if [ -z "$VEL_IP" ] || ! pgrep -f "tcp@free.pinggy.io" >/dev/null 2>&1 || ! pgrep -af "tcp@free.pinggy.io" | grep -qE "-R0:${VEL_IP}:25565"; then
   sudo pkill -f "tcp@free.pinggy.io" >/dev/null 2>&1 || true
   sleep 2
-  [ -n "$VEL_IP" ] || VEL_IP=172.41.0.6
+  # fall back to the docker bridge gateway: 25565 is always published there
+  [ -n "$VEL_IP" ] || VEL_IP=172.41.0.1
   sudo nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -T -p 443 -R0:$VEL_IP:25565 tcp@free.pinggy.io >"$PINGGY_LOG" 2>&1 &
   sleep 16
 fi

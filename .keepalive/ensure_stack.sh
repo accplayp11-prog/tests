@@ -51,7 +51,7 @@ done
 
 # --- 6) pinggy TCP tunnel -> velocity (public MC address) ---
 VEL_IP=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $VEL_UUID 2>/dev/null | tr -d ' \n')
-if [ -z "$VEL_IP" ] || ! pgrep -f "tcp@free.pinggy.io" >/dev/null 2>&1; then
+if [ -z "$VEL_IP" ] || ! pgrep -f "tcp@free.pinggy.io" >/dev/null 2>&1 || ! pgrep -af "tcp@free.pinggy.io" | grep -qE "-R0:${VEL_IP}:25565"; then
   sudo pkill -f "tcp@free.pinggy.io" >/dev/null 2>&1 || true
   sleep 2
   [ -n "$VEL_IP" ] || VEL_IP=172.41.0.6

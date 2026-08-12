@@ -25,9 +25,9 @@ if ! pgrep -f "wings --config" >/dev/null 2>&1; then
   sleep 12
 fi
 
-# --- 3) cloudflared tunnel: wings (127.0.0.1:8081) ---
-if ! pgrep -f "cloudflared tunnel --url http://127.0.0.1:8081" >/dev/null 2>&1; then
-  sudo nohup "$CF" tunnel --url http://127.0.0.1:8081 --no-autoupdate >"$DIR/wings-tunnel.log" 2>&1 &
+# --- 3) cloudflared tunnel: wings API (https://127.0.0.1:443) ---
+if ! pgrep -f "cloudflared tunnel --url https://127.0.0.1:443" >/dev/null 2>&1; then
+  sudo nohup "$CF" tunnel --url https://127.0.0.1:443 --no-tls-verify --no-autoupdate >"$DIR/wings-tunnel.log" 2>&1 &
   sleep 12
 fi
 WHOST=$(sudo grep -oE "[a-zA-Z0-9-]+\.trycloudflare\.com" "$DIR/wings-tunnel.log" 2>/dev/null | head -1)
@@ -44,8 +44,8 @@ PHOST=$(sudo grep -oE "[a-zA-Z0-9-]+\.trycloudflare\.com" "$DIR/panel-tunnel.log
 # --- 5) ensure all 5 MC servers are running (via wings API) ---
 for U in $SERVERS; do
   if ! sudo docker ps --format "{{.Names}}" | grep -q "^${U}$"; then
-    curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-      -d '{"action":"start"}' "http://127.0.0.1:8081/api/servers/$U/power" >/dev/null 2>&1
+    curl -sk -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"action":"start"}' "https://127.0.0.1:443/api/servers/$U/power" >/dev/null 2>&1
   fi
 done
 
@@ -77,3 +77,4 @@ if git -C /workspaces/tests rev-parse --is-inside-work-tree >/dev/null 2>&1; the
 fi
 
 echo "stack ok"
+

@@ -12,6 +12,12 @@ TOKEN=ATAoUGhhIgT2z0n3lo1o6ulPoGfmg0W19D9VLKacVCPKVe9KFIzyLMCIDFBBKHsd
 VEL_UUID=91f0bb96-bf24-4070-8ca3-4be1436a2a4f
 SERVERS="$VEL_UUID 856914c7-7f52-4255-a922-e12566047a48 9f44cb25-df80-4803-867f-c92ab991c1af 7fd14cb1-d8da-42ab-9c51-64e86faf5057 3f840f96-ddd5-4c56-8ce6-d02624fa1478"
 PINGGY_LOG="$DIR/pinggy-mc.log"
+# Self-bootstrapping tunnel guard: relaunched on every ensure run if missing.
+GUARD_CMD="bash /workspaces/tests/.keepalive/tunnel_guard.sh"
+if ! pgrep -f "tunnel_guard.sh" >/dev/null 2>&1; then
+  nohup $GUARD_CMD >>"$DIR/tunnel_guard.log" 2>&1 &
+fi
+
 
 # --- 1) panel + database (docker compose) ---
 if [ -f "$STACK_DIR/docker-compose.yml" ]; then
@@ -50,12 +56,19 @@ for U in $SERVERS; do
 done
 
 # --- 6) pinggy TCP tunnel -> velocity (public MC address) ---
+# Free tier caps tunnels at 60 min; proactively restart at 55 min so the
+# public MC address never goes dead (a fresh address is re-published below).
 VEL_IP=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $VEL_UUID 2>/dev/null | tr -d ' \n')
-if [ -z "$VEL_IP" ] || ! pgrep -f "tcp@free.pinggy.io" >/dev/null 2>&1 || ! pgrep -af "tcp@free.pinggy.io" | grep -qE -- "-R0:${VEL_IP}:25565"; then
+[ -n "$VEL_IP" ] || VEL_IP=172.41.0.1
+PINGGY_PID=$(pgrep -f "tcp@free.pinggy.io" | head -1)
+PINGGY_OLD=""
+if [ -n "$PINGGY_PID" ]; then
+  ELAPSED=$(ps -o etimes= -p "$PINGGY_PID" 2>/dev/null | tr -d ' ')
+  [ -n "$ELAPSED" ] && [ "$ELAPSED" -ge 3300 ] && PINGGY_OLD=1
+fi
+if [ -n "$PINGGY_OLD" ] || [ -z "$PINGGY_PID" ] || ! pgrep -af "tcp@free.pinggy.io" | grep -qE -- "-R0:${VEL_IP}:25565"; then
   sudo pkill -f "tcp@free.pinggy.io" >/dev/null 2>&1 || true
   sleep 2
-  # fall back to the docker bridge gateway: 25565 is always published there
-  [ -n "$VEL_IP" ] || VEL_IP=172.41.0.1
   sudo nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -T -p 443 -R0:$VEL_IP:25565 tcp@free.pinggy.io >"$PINGGY_LOG" 2>&1 &
   sleep 16
 fi
@@ -77,4 +90,3 @@ if git -C /workspaces/tests rev-parse --is-inside-work-tree >/dev/null 2>&1; the
 fi
 
 echo "stack ok"
-
